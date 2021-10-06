@@ -1,15 +1,20 @@
-use solid_python::lexer::{lex, Token};
+use solid_python::lexer::{lex};
+use solid_python::parser::{Parser, SessionGlobals};
 
 fn main() {
     let src = "\
-def main(a: int, b: str):
-    if str(a) == b:
-        return True
-    else:
-        return False
+def a(a: b, c: d) -> a:
+    def b() -> d:
+        3 + (5 + 6) * 8 + 2
+    return b
 ";
 
-    let tokens: Vec<Token> = lex(src).collect();
-
-    println!("{:#?}", tokens);
+    SessionGlobals::new_set(src, || {
+        let tokens = lex(src);
+        let mut parser = Parser::new(tokens);
+        match parser.parse_root() {
+            Err(e) => println!("{}", e.string_rep(src)),
+            Ok(t) => println!("{:#?}", t)
+        }
+    });
 }

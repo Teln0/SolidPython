@@ -1,0 +1,48 @@
+root ::= statement_block
+
+type_params ::= type_expr ("," type_expr)*
+fn_params ::= ident ":" type_expr ("," ident ":" type_expr)*
+fn_args ::= expr ("," expr)*
+
+
+statement_def ::= "def" ident "(" fn_params? ")" "->" type_expr ":" statement_block
+statement_assert ::= "assert" expr
+statement_if ::=
+    "if" expr ":" statement_block
+    ("elif" expr ":" statement_block)*
+    ("else" expr ":" statement_block)?
+statement_while ::= "while" expr ":" statement_block
+statement_for ::= "for" ident "in" expr ":" statement_block
+statement_break ::= "break"
+statement_continue ::= "continue"
+statement_return ::= "return" expr
+statement_expr ::= expr
+statement ::=
+    statement_def |
+    statement_assert |
+    statement_if |
+    statement_while |
+    statement_for |
+    statement_break
+    statement_continue |
+    statement_return |
+    statement_expr
+
+statement_block ::= blockstart (statement)+ blockend
+
+literal ::= integerliteral | floatliteral | stringliteral | boolliteral
+
+expr_primary ::= literal | ident | "(" expr ")"
+expr_access_and_call ::= expr_primary (
+        "." ident | "[" expr "]" | "(" fn_args? ")")*
+expr_exp ::= expr_access_and_call ("**" expr_exp)*
+expr_prefix ::= ("+" | "-")* expr_exp
+expr_product ::= expr_prefix (("*" | "/" | "%" | "//") expr_product)*
+expr_sum ::= expr_product (("+" | "-") expr_sum)*
+expr_comp ::= expr_sum (("<" | ">" | "<=" | ">=" | "!=" | "==") expr_comp)*
+expr_not ::= "not"* expr_comp
+expr_and ::= expr_not ("and" expr_and)*
+expr_or ::= expr_and ("or" expr_or)*
+expr_assign ::= expr_or ("=" expr_assign)*
+expr ::= expr_assign
+type_expr ::= expr
