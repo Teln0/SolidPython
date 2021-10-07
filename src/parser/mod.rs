@@ -1,57 +1,10 @@
 use std::iter::Peekable;
-use std::ops::{Deref, DerefMut};
-use std::sync::RwLock;
 use crate::ast::{ASTExpr, ASTFnDef, ASTStmt, ASTStmtBlock, ASTStmtKind, ASTIf, ASTWhile, ASTFor};
 use crate::lexer::{Token, TokenKind};
 use crate::report::{ExpectedTokenKinds, ParseError, ParseErrorKind};
-use crate::span::{BytePos, StringInterner, Symbol};
+use crate::span::{BytePos, Symbol, SessionGlobals};
 
 pub mod parse_expr;
-
-pub struct SessionGlobals {
-    pub interner: RwLock<StringInterner>,
-    // We guarantee that the source string will not be freed before the SessionGlobals structs is destroyed
-    pub src: &'static str
-}
-
-scoped_thread_local!(static SESSION_GLOBALS: SessionGlobals);
-
-impl SessionGlobals {
-    pub fn new(src: &'static str) -> Self {
-        Self {
-            interner: RwLock::new(StringInterner::new()),
-            src
-        }
-    }
-
-    pub fn new_set(src: &'static str, f: impl FnOnce()) {
-        SESSION_GLOBALS.set(&Self::new(src), f);
-    }
-
-    pub fn with<T>(f: impl FnOnce(&Self) -> T) -> T {
-        SESSION_GLOBALS.with(f)
-    }
-
-    pub fn with_interner<T>(f: impl FnOnce(&StringInterner) -> T) -> T {
-        Self::with(|session_globals| {
-            let interner = session_globals.interner.read().unwrap();
-            f(interner.deref())
-        })
-    }
-
-    pub fn with_interner_mut<T>(f: impl FnOnce(&mut StringInterner) -> T) -> T {
-        Self::with(|session_globals| {
-            let mut interner = session_globals.interner.write().unwrap();
-            f(interner.deref_mut())
-        })
-    }
-
-    pub fn with_src<T>(f: impl FnOnce(&str) -> T) -> T {
-        Self::with(|session_globals| {
-            f(session_globals.src)
-        })
-    }
-}
 
 pub type PResult<T> = Result<T, ParseError>;
 
