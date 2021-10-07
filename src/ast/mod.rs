@@ -3,6 +3,12 @@ use crate::span::{BytePos, Symbol};
 #[derive(Debug)]
 pub enum ASTStmtKind {
     FnDef(ASTFnDef),
+    Assert(ASTExpr),
+    If(ASTIf),
+    While(ASTWhile),
+    For(ASTFor),
+    Break,
+    Continue,
     Return(ASTExpr),
     Expr(ASTExpr)
 }
@@ -25,6 +31,25 @@ pub struct ASTFnDef {
     pub params: Vec<(Symbol, ASTExpr)>,
     // TODO : pub generic_params: Vec<Symbol>,
     pub return_type: ASTExpr,
+    pub block: ASTStmtBlock
+}
+
+#[derive(Debug)]
+pub struct ASTIf {
+    pub conditions_blocks: Vec<(ASTExpr, ASTStmtBlock)>,
+    pub else_block: Option<ASTStmtBlock>
+}
+
+#[derive(Debug)]
+pub struct ASTWhile {
+    pub condition: ASTExpr,
+    pub block: ASTStmtBlock
+}
+
+#[derive(Debug)]
+pub struct ASTFor {
+    pub ident: Symbol,
+    pub iter: ASTExpr,
     pub block: ASTStmtBlock
 }
 
@@ -53,11 +78,12 @@ pub enum ASTOperator {
 pub enum ASTExprKind {
     Ident(Symbol),
     Integer(Symbol),
+    Boolean(bool),
     BinOp(Box<ASTExpr>, ASTOperator, Box<ASTExpr>),
     PreOp(ASTOperator, Box<ASTExpr>),
     MemberAccess(Box<ASTExpr>, Symbol),
     IndexAccess(Box<ASTExpr>, Box<ASTExpr>),
-    Call(Box<ASTExpr>, Vec<Box<ASTExpr>>)
+    Call(Box<ASTExpr>, Vec<ASTExpr>)
 }
 
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::ops::{Deref, DerefMut};
 use std::sync::RwLock;
-use crate::ast::{ASTExpr, ASTFnDef, ASTStmt, ASTStmtBlock, ASTStmtKind};
+use crate::ast::{ASTExpr, ASTFnDef, ASTStmt, ASTStmtBlock, ASTStmtKind, ASTIf, ASTWhile, ASTFor};
 use crate::lexer::{Token, TokenKind};
 use crate::report::{ExpectedTokenKinds, ParseError, ParseErrorKind};
 use crate::span::{BytePos, StringInterner, Symbol};
@@ -200,6 +200,95 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let start = self.span_start();
         if self.check(TokenKind::KwDef) {
             return self.parse_statement_def();
+        }
+        if self.check(TokenKind::KwAssert) {
+            self.bump();
+            let expr = self.parse_expr()?;
+            return Ok(ASTStmt {
+                kind: ASTStmtKind::Assert(expr),
+                span: self.mk_span(start)
+            });
+        }
+        if self.check(TokenKind::KwIf) {
+            self.bump();
+            let mut conditions_blocks = vec![];
+
+            let expr = self.parse_expr()?;
+            self.expect(TokenKind::Colon)?;
+            let block = self.parse_statement_block()?;
+            conditions_blocks.push((expr, block));
+
+            while self.check(TokenKind::KwElif) {
+                self.bump();
+
+                let expr = self.parse_expr()?;
+                self.expect(TokenKind::Colon)?;
+                let block = self.parse_statement_block()?;
+                conditions_blocks.push((expr, block));
+            }
+
+            let else_block = if self.check(TokenKind::KwElse) {
+                self.bump();
+                self.expect(TokenKind::Colon)?;
+
+                let block = self.parse_statement_block()?;
+                Some(block)
+            }
+            else {
+                None
+            };
+
+            return Ok(ASTStmt {
+                kind: ASTStmtKind::If(ASTIf {
+                    conditions_blocks,
+                    else_block
+                }),
+                span: self.mk_span(start)
+            });
+        }
+        if self.check(TokenKind::KwWhile) {
+            self.bump();
+            let condition = self.parse_expr()?;
+            self.expect(TokenKind::Colon)?;
+            let block = self.parse_statement_block()?;
+            return Ok(ASTStmt {
+                kind: ASTStmtKind::While(ASTWhile {
+                    condition,
+                    block
+                }),
+                span: self.mk_span(start)
+            })
+        }
+        if self.check(TokenKind::KwFor) {
+            self.bump();
+            let ident = self.expect(TokenKind::Ident)?.span;
+            let ident = self.get_span_symbol(ident);
+            self.expect(TokenKind::KwIn)?;
+            let iter = self.parse_expr()?;
+            self.expect(TokenKind::Colon)?;
+            let block = self.parse_statement_block()?;
+            return Ok(ASTStmt {
+                kind: ASTStmtKind::For(ASTFor {
+                    ident,
+                    iter,
+                    block
+                }),
+                span: self.mk_span(start)
+            })
+        }
+        if self.check(TokenKind::KwBreak) {
+            self.bump();
+            return Ok(ASTStmt {
+                kind: ASTStmtKind::Break,
+                span: self.mk_span(start)
+            });
+        }
+        if self.check(TokenKind::KwContinue) {
+            self.bump();
+            return Ok(ASTStmt {
+                kind: ASTStmtKind::Continue,
+                span: self.mk_span(start)
+            });
         }
         if self.check(TokenKind::KwReturn) {
             self.bump();

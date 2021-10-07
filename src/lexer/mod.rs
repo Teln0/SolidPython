@@ -46,15 +46,17 @@ pub enum TokenKind {
     Dot,
     Arrow,
 
-    // def class assert if while for break continue return
+    // def class assert if elif else while for in break continue return
     KwDef,
     KwClass,
 
     KwAssert,
     KwIf,
+    KwElif,
     KwElse,
     KwWhile,
     KwFor,
+    KwIn,
     KwBreak,
     KwContinue,
     KwReturn,
@@ -266,9 +268,11 @@ fn first_token(input: &str) -> ThinToken {
                 "class" => TokenKind::KwClass,
                 "assert" => TokenKind::KwAssert,
                 "if" => TokenKind::KwIf,
+                "elif" => TokenKind::KwElif,
                 "else" => TokenKind::KwElse,
                 "while" => TokenKind::KwWhile,
                 "for" => TokenKind::KwFor,
+                "in" => TokenKind::KwIn,
                 "break" => TokenKind::KwBreak,
                 "continue" => TokenKind::KwContinue,
                 "return" => TokenKind::KwReturn,

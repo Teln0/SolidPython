@@ -26,39 +26,68 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             self.expect(TokenKind::RParent)?;
             return Ok(expr);
         }
+        if self.check(TokenKind::BooleanTrue) {
+            self.bump();
+            return Ok(ASTExpr {
+                kind: ASTExprKind::Boolean(true),
+                span: self.mk_span(start)
+            });
+        }
+        if self.check(TokenKind::BooleanFalse) {
+            self.bump();
+            return Ok(ASTExpr {
+                kind: ASTExprKind::Boolean(false),
+                span: self.mk_span(start)
+            });
+        }
 
         Err(self.err_unexpected())
     }
 
     pub(in super) fn parse_expr_access_and_call(&mut self) -> PResult<ASTExpr> {
         let start = self.span_start();
-        let lhs = self.parse_expr_primary()?;
-        if self.check(TokenKind::Dot) |
+        let mut lhs = self.parse_expr_primary()?;
+        while self.check(TokenKind::Dot) |
             self.check(TokenKind::LSBracket) |
             self.check(TokenKind::LParen) {
             let kind = self.bump().kind;
-            return Ok(match kind {
+            match kind {
                 TokenKind::Dot => {
                     let ident = self.expect(TokenKind::Ident)?.span;
                     let ident = self.get_span_symbol(ident);
-                    ASTExpr {
+                    lhs = ASTExpr {
                         kind: ASTExprKind::MemberAccess(Box::new(lhs), ident),
                         span: self.mk_span(start)
-                    }
+                    };
                 }
                 TokenKind::LSBracket => {
                     let rhs = self.parse_expr()?;
                     self.expect(TokenKind::RSBracket)?;
-                    ASTExpr {
+                    lhs = ASTExpr {
                         kind: ASTExprKind::IndexAccess(Box::new(lhs), Box::new(rhs)),
                         span: self.mk_span(start)
-                    }
+                    };
                 }
                 TokenKind::LParen => {
-                    todo!("fn call");
+                    let mut args = vec![];
+                    if self.check(TokenKind::RParent) {
+                        self.bump();
+                    }
+                    else {
+                        args.push(self.parse_expr()?);
+                        while self.check(TokenKind::Comma) {
+                            self.bump();
+                            args.push(self.parse_expr()?);
+                        }
+                        self.expect(TokenKind::RParent)?;
+                    }
+                    lhs = ASTExpr {
+                        kind: ASTExprKind::Call(Box::new(lhs), args),
+                        span: self.mk_span(start)
+                    };
                 }
                 _ => unreachable!()
-            })
+            }
         }
         Ok(lhs)
     }
